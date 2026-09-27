@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GG WP — Голосовая доска 🎮</title>
+    <style>
+        /* --- ОБЩИЕ СТИЛИ --- */
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+            background: #0a0e1a;
+            color: #e8e8e8;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(255, 70, 70, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(70, 130, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(160, 70, 255, 0.1) 0%, transparent 60%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .grid-bg {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-image:
+                linear-gradient(rgba(255, 70, 70, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 70, 70, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: 0;
+            pointer-events: none;
+            animation: gridMove 20s linear infinite;
+        }
+        @keyframes gridMove {
+            0% { background-position: 0 0; }
+            100% { background-position: 50px 50px; }
+        }
+
+        /* --- ЭКРАН ОТКРЫТИЯ --- */
+        .intro-screen {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #1a0a2e 0%, #0a0e1a 100%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 1.5s ease, transform 1.5s ease;
+        }
+        .intro-screen.hide {
+            opacity: 0;
+            transform: scale(1.3);
+            pointer-events: none;
+        }
+        .intro-title {
+            font-size: 4em;
+            font-weight: bold;
+            color: #ff4655;
+            text-shadow:
+                0 0 20px #ff4655,
+                0 0 40px #ff4655,
+                0 0 80px rgba(255, 70, 85, 0.5);
+            margin-bottom: 20px;
+            letter-spacing: 6px;
+            animation: pulse 2s ease-in-out infinite;
+            text-align: center;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .intro-subtitle {
+            font-size: 1.2em;
+            color: #b8b8d8;
+            margin-bottom: 50px;
+            letter-spacing: 3px;
+            opacity: 0.8;
+            text-align: center;
+            padding: 0 20px;
+        }
+        .open-btn {
+            padding: 25px 70px;
+            font-size: 1.6em;
+            font-weight: bold;
+            letter-spacing: 4px;
+            color: white;
+            background: linear-gradient(135deg, #ff4655, #8b0000);
+            border: 3px solid #ff8c8c;
+            border-radius: 12px;
+            cursor: pointer;
+            text-transform: uppercase;
+            position: relative;
+            transition: all 0.3s;
+            box-shadow:
+                0 0 20px rgba(255, 70, 85, 0.6),
+                inset 0 0 20px rgba(255, 255, 255, 0.1);
+            animation: btnGlow 2s ease-in-out infinite;
+        }
+        @keyframes btnGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(255, 70, 85, 0.6), inset 0 0 20px rgba(255,255,255,0.1); }
+            50% { box-shadow: 0 0 40px rgba(255, 70, 85, 1), inset 0 0 20px rgba(255,255,255,0.2); }
+        }
+        .open-btn:hover {
+            transform: scale(1.08);
+            background: linear-gradient(135deg, #ff6a76, #a00000);
+        }
+        .open-btn:active {
+            transform: scale(0.98);
+        }
+        .intro-hint {
+            margin-top: 30px;
+            color: #6a6a8a;
+            font-size: 0.9em;
+            letter-spacing: 2px;
+        }
+
+        /* --- ОСНОВНОЙ КОНТЕНТ --- */
+        .main-content {
+            position: relative;
+            z-index: 5;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 1.5s ease 0.3s, transform 1.5s ease 0.3s;
+            padding: 30px 20px 60px;
+        }
+        .main-content.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        header {
+            text-align: center;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        header h1 {
+            font-size: 3em;
+            color: #ff4655;
+            text-shadow: 0 0 20px rgba(255, 70, 85, 0.7);
+            margin: 0;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+        }
+        header .subtitle {
+            font-size: 1.1em;
+            color: #b8b8d8;
+            margin-top: 10px;
+            letter-spacing: 3px;
+        }
+        header .hint {
+            font-size: 0.9em;
+            color: #6a6a8a;
+            margin-top: 8px;
+            letter-spacing: 2px;
+        }
+
+        /* --- БЛОК КАРТИННЫХ КНОПОК --- */
+        .picture-board {
+            max-width: 1300px;
+            margin: 0 auto 40px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 25px;
+            padding: 0 20px;
+        }
+        .picture-btn {
+            background: linear-gradient(145deg, #1a1f2e, #0f1320);
+            border: 3px solid #a046ff;
+            border-radius: 15px;
+            padding: 18px 18px 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(160, 70, 255, 0.3);
+        }
+        .picture-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(160, 70, 255, 0.4), transparent);
+            transition: left 0.6s;
+        }
+        .picture-btn:hover {
+            border-color: #ff8cff;
+            transform: translateY(-5px) scale(1.03);
+            box-shadow:
+                0 0 30px rgba(160, 70, 255, 0.8),
+                0 0 60px rgba(160, 70, 255, 0.4);
+        }
+        .picture-btn:hover::before {
+            left: 100%;
+        }
+        .picture-btn:active {
+            transform: translateY(-2px) scale(1);
+        }
+        .picture-btn img {
+            width: 200px;
+            height: 200px;
+            object-fit: contain;
+            filter: drop-shadow(0 0 15px rgba(160, 70, 255, 0.7));
+            transition: filter 0.3s;
+            pointer-events: none;
+        }
+        .picture-btn:hover img {
+            filter: drop-shadow(0 0 25px rgba(160, 70, 255, 1));
+        }
+        .picture-btn .picture-label {
+            color: #e8e8e8;
+            font-family: 'Trebuchet MS', sans-serif;
+            font-size: 0.95em;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            text-align: center;
+            max-width: 200px;
+        }
+
+        .picture-btn.playing {
+            border-color: #ff4655;
+            box-shadow:
+                0 0 40px rgba(255, 70, 85, 1),
+                0 0 80px rgba(255, 70, 85, 0.6);
+            animation: playingPulse 0.8s ease-in-out infinite;
+        }
+        .picture-btn.playing img {
+            filter: drop-shadow(0 0 30px rgba(255, 70, 85, 1));
+        }
+        .picture-btn.playing::after {
+            content: '🔊';
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            font-size: 18px;
+            animation: soundIcon 0.6s ease-in-out infinite;
+        }
+
+        /* --- СЕТКА КНОПОК-ГОЛОСОВЫХ --- */
+        .board {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 14px;
+            padding: 0 10px;
+        }
+        .sound-btn {
+            background: linear-gradient(145deg, #1a1f2e, #0f1320);
+            border: 2px solid #2a3a5a;
+            border-radius: 10px;
+            padding: 16px 12px;
+            color: #e8e8e8;
+            font-family: 'Trebuchet MS', sans-serif;
+            font-size: 0.95em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            word-wrap: break-word;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            letter-spacing: 0.5px;
+        }
+        .sound-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 70, 85, 0.3), transparent);
+            transition: left 0.5s;
+        }
+        .sound-btn:hover {
+            border-color: #ff4655;
+            color: #fff;
+            transform: translateY(-3px);
+            box-shadow:
+                0 0 20px rgba(255, 70, 85, 0.5),
+                0 5px 15px rgba(0, 0, 0, 0.5);
+        }
+        .sound-btn:hover::before {
+            left: 100%;
+        }
+        .sound-btn:active {
+            transform: translateY(0);
+        }
+
+        .sound-btn.playing {
+            background: linear-gradient(145deg, #ff4655, #8b0000);
+            border-color: #ff8c8c;
+            color: white;
+            box-shadow:
+                0 0 30px rgba(255, 70, 85, 0.9),
+                0 0 60px rgba(255, 70, 85, 0.5);
+            animation: playingPulse 0.8s ease-in-out infinite;
+        }
+        @keyframes playingPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+        .sound-btn.playing::after {
+            content: '🔊';
+            position: absolute;
+            top: 5px;
+            right: 8px;
+            font-size: 14px;
+            animation: soundIcon 0.6s ease-in-out infinite;
+        }
+        @keyframes soundIcon {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* --- ФУТЕР --- */
+        .footer {
+            text-align: center;
+            margin-top: 60px;
+            color: #4a4a6a;
+            font-size: 0.85em;
+            letter-spacing: 2px;
+        }
+        .footer .emoji {
+            font-size: 1.3em;
+            margin: 0 5px;
+        }
+
+        /* --- СЧЁТЧИК ПРОИГРАННЫХ --- */
+        .play-counter {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(26, 31, 46, 0.95);
+            border: 2px solid #2a3a5a;
+            border-radius: 10px;
+            padding: 10px 18px;
+            color: #b8b8d8;
+            font-size: 0.9em;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            letter-spacing: 1px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+        }
+        .play-counter span {
+            color: #ff4655;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        /* --- БОЛЬШАЯ КАРТИНКА ПОВЕРХ ЭКРАНА --- */
+        .big-image-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 8000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        .big-image-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .big-image-overlay img {
+            max-width: 90vw;
+            max-height: 90vh;
+            border-radius: 20px;
+            box-shadow:
+                0 0 60px rgba(255, 70, 85, 0.9),
+                0 0 120px rgba(160, 70, 255, 0.6);
+            transform: scale(0.6);
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            animation: bigImageGlow 2s ease-in-out infinite;
+            cursor: zoom-out;
+        }
+        .big-image-overlay.show img {
+            transform: scale(1);
+        }
+        @keyframes bigImageGlow {
+            0%, 100% {
+                box-shadow:
+                    0 0 60px rgba(255, 70, 85, 0.9),
+                    0 0 120px rgba(160, 70, 255, 0.6);
+            }
+            50% {
+                box-shadow:
+                    0 0 90px rgba(255, 70, 85, 1),
+                    0 0 160px rgba(160, 70, 255, 0.9);
+            }
+        }
+
+        .big-image-close {
+            position: fixed;
+            top: 25px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff4655, #8b0000);
+            border: 3px solid #ff8c8c;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 8100;
+            transition: all 0.3s;
+            box-shadow: 0 0 20px rgba(255, 70, 85, 0.8);
+            font-family: Arial, sans-serif;
+            line-height: 1;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .big-image-close.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .big-image-close:hover {
+            transform: scale(1.15) rotate(90deg);
+            background: linear-gradient(135deg, #ff6a76, #a00000);
+        }
+
+        /* --- АДАПТИВ --- */
+        @media (max-width: 768px) {
+            .intro-title { font-size: 2.2em; letter-spacing: 3px; }
+            .intro-subtitle { font-size: 1em; }
+            .open-btn { padding: 18px 40px; font-size: 1.2em; letter-spacing: 2px; }
+            header h1 { font-size: 1.8em; letter-spacing: 2px; }
+            .board {
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                gap: 10px;
+            }
+            .sound-btn {
+                padding: 12px 8px;
+                font-size: 0.85em;
+                min-height: 70px;
+            }
+            .picture-btn img {
+                width: 140px;
+                height: 140px;
+            }
+            .picture-btn .picture-label {
+                font-size: 0.85em;
+            }
+            .play-counter {
+                bottom: 10px;
+                right: 10px;
+                font-size: 0.8em;
+                padding: 8px 14px;
+            }
+            .big-image-close {
+                width: 42px;
+                height: 42px;
+                font-size: 20px;
+                top: 15px;
+                right: 15px;
+            }
+        }
+        @media (max-width: 400px) {
+            .board { grid-template-columns: repeat(2, 1fr); }
+            .picture-btn img {
+                width: 110px;
+                height: 110px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="grid-bg"></div>
+
+    <!-- ЭКРАН ОТКРЫТИЯ -->
+    <div class="intro-screen" id="introScreen">
+        <div class="intro-title">GG WP</div>
+        <div class="intro-subtitle">Голосовая доска для легенды</div>
+        <button class="open-btn" id="openBtn">ОТКРЫТЬ</button>
+        <div class="intro-hint">▲ нажми и приготовься</div>
+    </div>
+
+    <!-- ОСНОВНОЙ КОНТЕНТ -->
+    <div class="main-content" id="mainContent">
+
+        <header>
+            <h1>🎮 VOICE BOARD 🎮</h1>
+            <div class="subtitle">С днём рождения, бро!</div>
+            <div class="hint">жми любую кнопку — слушай голосовые</div>
+        </header>
+
+        <div class="picture-board" id="pictureBoard">
+            <!-- Генерируются через JS -->
+        </div>
+
+        <div class="board" id="board">
+            <!-- Генерируются через JS -->
+        </div>
+
+        <div class="footer">
+            <span class="emoji">🎧</span>
+            сделано с душой
+            <span class="emoji">❤️</span>
+        </div>
+    </div>
+
+    <!-- СЧЁТЧИК -->
+    <div class="play-counter" id="counter">Прослушано: <span id="counterValue">0</span></div>
+
+    <!-- БОЛЬШАЯ КАРТИНКА ПОВЕРХ ЭКРАНА -->
+    <div class="big-image-overlay" id="bigImageOverlay">
+        <button class="big-image-close" id="bigImageClose">✕</button>
+        <img id="bigImage" src="" alt="">
+    </div>
+
+    <!-- Скрытый audio-элемент -->
+    <audio id="audioPlayer"></audio>
+
+    <script>
+        // ================== КАРТИННЫЕ ГОЛОСОВЫЕ ==================
+        const pictureSounds = [
+            { image: '300.jpg', label: '300 часов', sound: '300 часов' },
+            { image: 'Dazzle.webp', label: 'Дазл мозга', sound: 'Дазл мозга' },
+            { image: 'трахну.jpg', label: 'Я трахну тебя', sound: 'Я трахну тебя' },
+            { image: 'челобот.webp', label: 'Челобот', sound: 'челобот' },
+            { image: 'рык.png', label: 'Рык', sound: 'рык' },
+            { image: 'лиз.webp', label: 'Лизнул', sound: 'Лизнул' },
+            { image: 'котлетки.jpg', label: 'Котлетки', sound: 'Котлетки' },
+            { image: 'калека.jpg', label: 'Калека кек', sound: 'калека кек' },
+            { image: 'сильфи.webp', label: 'Сильфи', sounds: ['сильфи1', 'Сильфи'] },
+            { image: 'снег.png', label: 'Выпал', sound: 'выпал' },
+            {
+                image: 'О, ярик вернулся.jpg',
+                label: 'Ярика буди',
+                sound: 'ярика буди',
+                bigImage: 'О, ярик вернулся.jpg'
+            },
+            { image: 'река.jpg', label: 'Идущий к реке', sound: 'идущий к реке' }
+        ];
+
+        // ================== ОБЫЧНЫЕ ГОЛОСОВЫЕ ==================
+        // «300 часов» убран отсюда, потому что он теперь в картинных
+        const sounds = [
+            "аркана",
+            "блять",
+            "бойфренд",
+            "в пизде",
+            "всмысле блять",
+            "вумен",
+            "Ебануться",
+            "захуярю",
+            "и че",
+            "кашель",
+            "кухня",
+            "лечиться",
+            "Мальчик мой",
+            "нефертити",
+            "Ночь не спал",
+            "опущенный",
+            "очкастый",
+            "пиздец",
+            "прикол",
+            "свиноты",
+            "Ситуация",
+            "скриншот",
+            "спал",
+            "спасибо",
+            "спит",
+            "срать",
+            "старый бох",
+            "такой человек",
+            "ха",
+            "чепуха",
+            "Читать люблю",
+            "шмотки",
+            "я умираю"
+        ];
+
+        // ================== ЛОГИКА ==================
+        const board = document.getElementById('board');
+        const pictureBoard = document.getElementById('pictureBoard');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const introScreen = document.getElementById('introScreen');
+        const mainContent = document.getElementById('mainContent');
+        const openBtn = document.getElementById('openBtn');
+        const counterValue = document.getElementById('counterValue');
+        const bigImageOverlay = document.getElementById('bigImageOverlay');
+        const bigImage = document.getElementById('bigImage');
+        const bigImageClose = document.getElementById('bigImageClose');
+
+        let currentBtn = null;
+        let playCount = 0;
+        let playlist = [];
+        let playlistIndex = 0;
+
+        // Создаём обычные кнопки
+        sounds.forEach((name) => {
+            const btn = document.createElement('button');
+            btn.className = 'sound-btn';
+            btn.textContent = name;
+            btn.addEventListener('click', () => playSound([name], btn, null));
+            board.appendChild(btn);
+        });
+
+        // Создаём картинные кнопки
+        pictureSounds.forEach((item) => {
+            const btn = document.createElement('button');
+            btn.className = 'picture-btn';
+            btn.innerHTML = `
+                <img src="${item.image}" alt="${item.label}">
+                <span class="picture-label">${item.label}</span>
+            `;
+            const queue = item.sounds ? item.sounds : [item.sound];
+            const bigImg = item.bigImage || null;
+            btn.addEventListener('click', () => playSound(queue, btn, bigImg));
+            pictureBoard.appendChild(btn);
+        });
+
+        // Проигрывание звука
+        function playSound(queue, btn, bigImg) {
+            if (currentBtn === btn && !audioPlayer.paused) {
+                audioPlayer.pause();
+                audioPlayer.currentTime = 0;
+                btn.classList.remove('playing');
+                currentBtn = null;
+                playlist = [];
+                return;
+            }
+
+            if (currentBtn) currentBtn.classList.remove('playing');
+
+            playlist = queue.slice();
+            playlistIndex = 0;
+
+            btn.classList.add('playing');
+            currentBtn = btn;
+            playCount++;
+            counterValue.textContent = playCount;
+
+            if (bigImg) {
+                showBigImage(bigImg);
+            }
+
+            playNext();
+        }
+
+        function playNext() {
+            if (playlistIndex >= playlist.length) {
+                if (currentBtn) currentBtn.classList.remove('playing');
+                currentBtn = null;
+                playlist = [];
+                return;
+            }
+
+            const name = playlist[playlistIndex];
+            const src = name + '.mp3';
+            playlistIndex++;
+
+            audioPlayer.src = src;
+            audioPlayer.play().catch(err => {
+                console.error('Ошибка воспроизведения:', err);
+                alert('Не удалось воспроизвести: ' + src + '\nПроверь, что файл загружен в репозиторий.');
+                if (currentBtn) currentBtn.classList.remove('playing');
+                currentBtn = null;
+                playlist = [];
+            });
+        }
+
+        audioPlayer.addEventListener('ended', () => {
+            if (playlistIndex < playlist.length) {
+                playNext();
+            } else {
+                if (currentBtn) currentBtn.classList.remove('playing');
+                currentBtn = null;
+                playlist = [];
+            }
+        });
+
+        // ================== БОЛЬШАЯ КАРТИНКА ==================
+        function showBigImage(src) {
+            bigImage.src = src;
+            bigImageOverlay.classList.add('show');
+            bigImageClose.classList.add('show');
+        }
+
+        function hideBigImage() {
+            bigImageOverlay.classList.remove('show');
+            bigImageClose.classList.remove('show');
+        }
+
+        bigImageOverlay.addEventListener('click', (e) => {
+            if (e.target === bigImageOverlay) {
+                hideBigImage();
+            }
+        });
+
+        bigImage.addEventListener('click', () => {
+            hideBigImage();
+        });
+
+        bigImageClose.addEventListener('click', (e) => {
+            e.stopPropagation();
+            hideBigImage();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') hideBigImage();
+        });
+
+        // ================== ЭКРАН ОТКРЫТИЯ ==================
+        openBtn.addEventListener('click', () => {
+            audioPlayer.src = 'открыть.mp3';
+            audioPlayer.play().catch(err => {
+                console.log('Не удалось проиграть «открыть.mp3»:', err);
+            });
+
+            introScreen.classList.add('hide');
+            setTimeout(() => {
+                mainContent.classList.add('show');
+            }, 300);
+            setTimeout(() => {
+                introScreen.style.display = 'none';
+            }, 2000);
+        });
+
+        // ================== ПАДАЮЩИЕ ЧАСТИЦЫ ==================
+        function createSpark() {
+            const spark = document.createElement('div');
+            const colors = ['#ff4655', '#ff8c8c', '#4682ff', '#a046ff', '#ffcc00'];
+            spark.style.position = 'fixed';
+            spark.style.width = '3px';
+            spark.style.height = '3px';
+            spark.style.borderRadius = '50%';
+            spark.style.background = colors[Math.floor(Math.random() * colors.length)];
+            spark.style.left = Math.random() * 100 + 'vw';
+            spark.style.top = '-10px';
+            spark.style.zIndex = '1';
+            spark.style.pointerEvents = 'none';
+            spark.style.boxShadow = '0 0 8px currentColor';
+            spark.style.color = spark.style.background;
+            const duration = Math.random() * 4 + 5;
+            spark.style.transition = `transform ${duration}s linear, opacity ${duration}s linear`;
+            document.body.appendChild(spark);
+
+            requestAnimationFrame(() => {
+                spark.style.transform = `translateY(110vh) translateX(${(Math.random() - 0.5) * 200}px)`;
+                spark.style.opacity = '0';
+            });
+
+            setTimeout(() => spark.remove(), duration * 1000);
+        }
+        setInterval(createSpark, 400);
+    </script>
+</body>
+</html>
